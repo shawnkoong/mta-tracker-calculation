@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"runtime"
 	"time"
 )
 
@@ -15,12 +16,11 @@ func main() {
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
+	doTasks()
 	for {
 		select {
 		case <-ticker.C:
-			data := fetchData()
-			go calculateArrivalTimes(data)
-			go calculateTrainPositions(data)
+			doTasks()
 		}
 	}
 }
@@ -39,4 +39,19 @@ func fetchData() *MtaResponse {
 	}
 	log.Println("fetched data")
 	return &data
+}
+
+func printMemoryUsage() {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	fmt.Printf("Allocated Memory: %d bytes\n", m.Alloc)
+	fmt.Printf("Total Memory Allocated (including freed): %d bytes\n", m.TotalAlloc)
+	fmt.Printf("Memory Obtained from the OS: %d bytes\n", m.Sys)
+	fmt.Printf("Number of Garbage Collection Cycles: %d\n", m.NumGC)
+}
+
+func doTasks() {
+	data := fetchData()
+	go calculateArrivalTimes(data)
+	//go calculateTrainPositions(data)
 }
