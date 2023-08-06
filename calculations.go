@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"sort"
 	"time"
 )
 
@@ -18,8 +19,7 @@ func calculateArrivalTimes(data *MtaResponse) {
 		}
 		stopTimes := make(map[string]map[string][]ArrivalTime)
 		allTimes[line] = stopTimes
-		trips := route.Trips
-		for direction, tripArr := range trips {
+		for direction, tripArr := range route.Trips {
 			for _, trip := range tripArr {
 				lastStopId := trip.LastStopMade
 				if lastStopId == "" {
@@ -51,5 +51,77 @@ func calculateArrivalTimes(data *MtaResponse) {
 
 func calculateTrainPositions(data *MtaResponse) {
 	log.Printf("Starting train position calculation %s\n", time.Now())
+	routes := data.Routes
+	allPositions := make(map[string]map[string][]CoordinateBearing)
+	for line, route := range routes {
+		if !route.Scheduled || route.Status == "No Service" {
+			continue
+		}
+		directionMap := make(map[string][]CoordinateBearing)
+		for direction, tripArr := range route.Trips {
+			trainPositions := make([]CoordinateBearing, 0)
+			for _, trip := range tripArr {
+				lastStopId := trip.LastStopMade
+				if lastStopId == "" {
+					continue
+				}
+				stops := trip.Stops
+				nextStopId := findNextStopId(stops, lastStopId)
+				if nextStopId == "" {
+					continue
+				}
+				var pathName string
+				if direction == "north" {
+					pathName = lastStopId + "-" + nextStopId
+				} else {
+					pathName = nextStopId + "-" + lastStopId
+				}
+				path := getPath(pathName)
+				if path.length() == 0 {
+					continue
+				}
+				lastTimestamp := stops[lastStopId]
+				nextTimestamp := stops[nextStopId]
+				nowTimestamp := time.Now().Unix()
+				progress := float64(nowTimestamp-lastTimestamp) / float64(nextTimestamp-lastTimestamp)
+				coordBearing := path.getPointAtProgress(progress)
+				trainPositions = append(trainPositions, coordBearing)
+			}
+			directionMap[direction] = trainPositions
+		}
+		allPositions[line] = directionMap
+	}
+	client := getRedisClient()
+	err := save(client, TrainPositionKey, allPositions)
+	if err != nil {
+		log.Printf("Error saving to redis: %s\n", err)
+	}
 	log.Printf("Finished train position calculation %s\n", time.Now())
+}
+
+func findNextStopId(stops map[string]int64, lastStopId string) string {
+	keys := make([]string, len(stops))
+	i := 0
+	for key := range stops {
+		keys[i] = key
+		i++
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return stops[keys[i]] < stops[keys[j]]
+	})
+	// pretty sure index can't equal -1 since the train's last stop cannot be the final stop, but just in case
+	index := indexOf(lastStopId, keys)
+	if index == -1 {
+		return ""
+	}
+	return keys[index+1]
+}
+
+func indexOf(element string, data []string) int {
+	for k, v := range data {
+		if element == v {
+			return k
+		}
+	}
+	return -1
 }
