@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"log"
 	"os"
 	"sync"
@@ -28,4 +30,13 @@ func getRedisClient() *redis.Client {
 		})
 	})
 	return redisClient
+}
+
+func save(client *redis.Client, key string, data interface{}) error {
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	err = client.Set(context.Background(), key, string(jsonData), 0).Err()
+	return err
 }
