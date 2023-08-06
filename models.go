@@ -59,3 +59,9 @@ type StationDetail struct {
 	Latitude  float64                `json:"latitude"`
 	North     map[string][][]float64 `json:"north"`
 }
+
+type ArrivalTime struct {
+	Time       int64
+	IsDelayed  bool
+	IsAssigned bool
+}
