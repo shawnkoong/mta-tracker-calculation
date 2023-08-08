@@ -39,13 +39,13 @@ type Section struct {
 }
 
 type Trip struct {
-	Id                   string           `json:"id"`
-	Stops                map[string]int64 `json:"stops"`
-	DelayedTime          float64          `json:"delayed_time"`
-	ScheduledDiscrepancy float64          `json:"scheduled_discrepancy"`
-	IsDelayed            bool             `json:"is_delayed"`
-	IsAssigned           bool             `json:"is_assigned"`
-	LastStopMade         string           `json:"last_stop_made"`
+	Id                   string             `json:"id"`
+	Stops                map[string]float64 `json:"stops"`
+	DelayedTime          float64            `json:"delayed_time"`
+	ScheduledDiscrepancy float64            `json:"scheduled_discrepancy"`
+	IsDelayed            bool               `json:"is_delayed"`
+	IsAssigned           bool               `json:"is_assigned"`
+	LastStopMade         string             `json:"last_stop_made"`
 }
 
 type Path struct {
