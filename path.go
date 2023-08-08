@@ -55,7 +55,9 @@ func getPath(pathName string) *Path {
 	}
 	nameSplit := strings.Split(pathName, "-")
 	path := getPathRecursive(nameSplit[0], nameSplit[1], 0)
-	(*pm)[pathName] = *path
+	if path != nil {
+		(*pm)[pathName] = *path
+	}
 	return path
 }
 
