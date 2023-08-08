@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"sort"
 	"time"
@@ -77,14 +78,18 @@ func calculateTrainPositions(data *MtaResponse) {
 					pathName = nextStopId + "-" + lastStopId
 				}
 				path := getPath(pathName)
-				if path.length() == 0 {
+				if path == nil || path.length() == 0 {
+					fmt.Println(pathName)
 					continue
 				}
 				lastTimestamp := stops[lastStopId]
 				nextTimestamp := stops[nextStopId]
-				nowTimestamp := time.Now().Unix()
-				progress := float64(nowTimestamp-lastTimestamp) / float64(nextTimestamp-lastTimestamp)
-				coordBearing := path.getPointAtProgress(progress)
+				nowTimestamp := float64(time.Now().Unix())
+				progress := (nowTimestamp - lastTimestamp) / (nextTimestamp - lastTimestamp)
+				coordBearing, err := path.getPointAtProgress(progress)
+				if err != nil {
+					continue
+				}
 				trainPositions = append(trainPositions, coordBearing)
 			}
 			directionMap[direction] = trainPositions
@@ -99,7 +104,7 @@ func calculateTrainPositions(data *MtaResponse) {
 	log.Printf("Finished train position calculation %s\n", time.Now())
 }
 
-func findNextStopId(stops map[string]int64, lastStopId string) string {
+func findNextStopId(stops map[string]float64, lastStopId string) string {
 	keys := make([]string, len(stops))
 	i := 0
 	for key := range stops {
