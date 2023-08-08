@@ -1,5 +1,10 @@
 package main
 
+import (
+	"errors"
+	"math"
+)
+
 type MtaResponse struct {
 	Timestamp int64            `json:"timestamp"`
 	Routes    map[string]Route `json:"routes"`
@@ -70,14 +75,39 @@ func (p *Path) length() int {
 	return len(p.Points)
 }
 
-func (p *Path) getPointAtProgress(progress float64) CoordinateBearing {
+func (p *Path) getPointAtProgress(progress float64) (CoordinateBearing, error) {
+	tDist := p.findTotalDistance()
+	distTravelled := tDist * progress
 	points := p.Points
-	// TODO
+	for i := 0; i < len(points)-1; i++ {
+		distBwtStations := haversineDistance(points[i], points[i+1])
+		if distBwtStations < distTravelled {
+			distTravelled -= distBwtStations
+		} else {
+			bearing := calculateBearing(points[i], points[i+1])
+			bearing = normalizeBearing(bearing)
+			currPoint := pointWithProgress(points[i], distTravelled, bearing)
+			return CoordinateBearing{Bearing: bearing * 180 / math.Pi, Latitude: currPoint.Latitude, Longitude: currPoint.Longitude}, nil
+		}
+	}
+	return CoordinateBearing{}, errors.New("not able to find current position")
+}
+
+func (p *Path) findTotalDistance() float64 {
+	points := p.Points
+	if n := len(points); n > 1 {
+		distance := 0.0
+		for i := 0; i < len(points)-1; i++ {
+			distance += haversineDistance(points[i], points[i+1])
+		}
+		return distance
+	}
+	return 0.0
 }
 
 type Point struct {
-	Longitude float64
-	Latitude  float64
+	Longitude float64 `json:"longitude"`
+	Latitude  float64 `json:"latitude"`
 }
 
 type StationDetail struct {
@@ -88,13 +118,13 @@ type StationDetail struct {
 }
 
 type ArrivalTime struct {
-	Time       int64
-	IsDelayed  bool
-	IsAssigned bool
+	Time       int64 `json:"time"`
+	IsDelayed  bool  `json:"isDelayed"`
+	IsAssigned bool  `json:"isAssigned"`
 }
 
 type CoordinateBearing struct {
-	Longitude float64
-	Latitude  float64
-	Bearing   float32
+	Longitude float64 `json:"longitude"`
+	Latitude  float64 `json:"latitude"`
+	Bearing   float64 `json:"bearing"` // in degrees from north, clock-wise
 }
