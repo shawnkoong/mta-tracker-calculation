@@ -28,6 +28,7 @@ func haversineDistance(p1, p2 Point) float64 {
 	return 2 * r * math.Asin(math.Sqrt(h))
 }
 
+// something wrong with this function not returning the correct value
 func vincentyDistance(p1, p2 Point) (float64, error) {
 	piRad := math.Pi / 180
 	lat1, lat2 := p1.Latitude*piRad, p2.Latitude*piRad
@@ -41,7 +42,7 @@ func vincentyDistance(p1, p2 Point) (float64, error) {
 	sinU2 := math.Sin(U2)
 	cosU2 := math.Cos(U2)
 
-	var sinLambda, cosLambda, sigma, sinSigma, cosSigma, sinAlpha, cosAlpha, cos2SigmaM, C float64
+	var sinLambda, cosLambda, sigma, sinSigma, cosSigma, sinAlpha, cosAlpha, cosSqAlpha, cos2SigmaM, C float64
 	var iter = 0
 
 	for {
@@ -51,8 +52,9 @@ func vincentyDistance(p1, p2 Point) (float64, error) {
 		cosSigma = sinU1*sinU2 + cosU1*cosU2*cosLambda
 		sigma = math.Atan2(sinSigma, cosSigma)
 		sinAlpha = cosU1 * cosU2 * sinLambda / sinSigma
-		cos2SigmaM = cosSigma - (2*sinU1*sinU2)/(cosAlpha*cosAlpha)
-		C = f / 16 * cosAlpha * cosAlpha * (4 + f*(4-3*cosAlpha*cosAlpha))
+		cosSqAlpha = 1 - sinAlpha*sinAlpha
+		cos2SigmaM = cosSigma - (2*sinU1*sinU2)/cosSqAlpha
+		C = f / 16 * cosSqAlpha * (4 + f*(4-3*cosSqAlpha))
 		lambdaPrev := lambda
 		lambda = L + (1-C)*f*sinAlpha*(sigma+C*sinSigma*(cos2SigmaM+C*cosSigma*(-1+2*cos2SigmaM*cos2SigmaM)))
 		if math.Abs(lambdaPrev-lambda) <= tolerance || iter == maxIter {
@@ -68,4 +70,12 @@ func vincentyDistance(p1, p2 Point) (float64, error) {
 	B := u2 / 1024 * (256 + u2*(-128+u2*(74-47*u2)))
 	deltaSigma := B*sinSigma*(cos2SigmaM) + B/4*(cosSigma*(-1+2*cos2SigmaM*cos2SigmaM)-B/6*cos2SigmaM*(-3+4*sinSigma*sinSigma)*(-3+4*cos2SigmaM*cos2SigmaM))
 	return b * A * (sigma - deltaSigma), nil
+}
+
+func calculateDistance(p1, p2 Point) float64 {
+	distance, err := vincentyDistance(p1, p2)
+	if err != nil {
+		return haversineDistance(p1, p2)
+	}
+	return distance
 }
