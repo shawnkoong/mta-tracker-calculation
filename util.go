@@ -13,7 +13,7 @@ const tolerance = 1e-12 // tolerance for convergence
 const maxIter = 20
 
 // radius of Earth in meters
-const r = 6378100
+const r = 637810000.0
 
 // https://en.wikipedia.org/wiki/Haversine_formula
 func hsin(theta float64) float64 {
@@ -26,6 +26,7 @@ func haversineDistance(p1, p2 Point) float64 {
 	long1, long2 := p1.Longitude*piRad, p2.Longitude*piRad
 	h := hsin(lat2-lat1) + math.Cos(lat1)*math.Cos(lat2)*hsin(long2-long1)
 	return 2 * r * math.Asin(math.Sqrt(h))
+	//return 2 * r * math.Atan2(math.Sqrt(h), math.Sqrt(1-h))
 }
 
 // something wrong with this function not returning the correct value
@@ -78,4 +79,30 @@ func calculateDistance(p1, p2 Point) float64 {
 		return haversineDistance(p1, p2)
 	}
 	return distance
+}
+
+func calculateBearing(p1, p2 Point) float64 {
+	piRad := math.Pi / 180
+	lat1, lat2 := p1.Latitude*piRad, p2.Latitude*piRad
+	long1, long2 := p1.Longitude*piRad, p2.Longitude*piRad
+	y := math.Sin(long2-long1) * math.Cos(lat2)
+	x := math.Cos(lat1)*math.Sin(lat2) - math.Sin(lat1)*math.Cos(lat2)*math.Cos(long2-long1)
+	return math.Atan2(y, x)
+}
+
+func pointWithProgress(point Point, distance float64, bearing float64) Point {
+	piRad := math.Pi / 180
+	lat1 := point.Latitude * piRad
+	long1 := point.Longitude * piRad
+	dr := distance / r
+	lat2 := math.Asin(math.Sin(lat1)*math.Cos(dr) + math.Cos(lat1)*math.Sin(dr)*math.Cos(bearing))
+	long2 := long1 + math.Atan2(math.Sin(bearing)*math.Sin(dr)*math.Cos(lat1), math.Cos(dr)-math.Sin(lat1)*math.Sin(lat2))
+	return Point{Latitude: lat2 / piRad, Longitude: long2 / piRad}
+}
+
+func normalizeBearing(bearing float64) float64 {
+	if bearing < 0 {
+		bearing = bearing + 2*math.Pi
+	}
+	return bearing
 }
