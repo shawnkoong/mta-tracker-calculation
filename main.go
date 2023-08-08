@@ -53,5 +53,5 @@ func printMemoryUsage() {
 func doTasks() {
 	data := fetchData()
 	go calculateArrivalTimes(data)
-	//go calculateTrainPositions(data)
+	go calculateTrainPositions(data)
 }
